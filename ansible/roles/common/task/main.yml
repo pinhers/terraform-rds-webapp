@@ -1,0 +1,28 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    force_apt_get: yes
+
+- name: Install basic packages
+  apt:
+    name:
+      - git
+      - python3-venv
+      - python3-pip
+      - nginx
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Ensure nginx service is running
+  service:
+    name: nginx
+    state: started
+    enabled: yes

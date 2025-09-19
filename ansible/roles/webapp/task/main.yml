@@ -1,0 +1,24 @@
+- name: Clone application repo
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: master
+
+- name: Create Python virtual environment
+  command: python3 -m venv "{{ venv_dir }}"
+  args:
+    creates: "{{ venv_dir }}/bin/activate"
+
+- name: Upgrade ensurepip inside venv
+  command: "{{ venv_dir }}/bin/python3 -m ensurepip --upgrade"
+
+- name: Upgrade pip inside venv
+  command: "{{ venv_dir }}/bin/python3 -m pip install --upgrade pip"
+
+- name: Install python requirements inside venv
+  pip:
+    virtualenv: "{{ venv_dir }}"
+    name:
+      - flask
+      - flask-sqlalchemy
+      - psycopg2-binary

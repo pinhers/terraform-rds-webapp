@@ -1,0 +1,3 @@
+repo_url: "https://github.com/pinhers/terraform-rds-webapp.git"   # <-- put your URL here
+app_dir: "/home/ubuntu/terraform-rds-webapp"
+venv_dir: "/home/ubuntu/venv"
