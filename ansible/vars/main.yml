@@ -1,3 +1,4 @@
-repo_url: "https://github.com/pinhers/terraform-rds-webapp.git"   # <-- put your URL here
+repo_url: "https://github.com/pinhers/terraform-rds-webapp.git"
 app_dir: "/home/ubuntu/terraform-rds-webapp"
 venv_dir: "/home/ubuntu/venv"
+python_executable: "{{ venv_dir }}/bin/python3"

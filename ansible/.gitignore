@@ -1,0 +1,7 @@
+inventory.ini
+*.retry
+__pycache__/
+.cache/
+*.log
+
+

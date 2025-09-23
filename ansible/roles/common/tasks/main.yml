@@ -1,10 +1,11 @@
+---
 - name: Update apt cache
-  apt:
+  ansible.builtin.apt:
     update_cache: yes
     force_apt_get: yes
 
-- name: Install basic packages
-  apt:
+- name: Install base packages
+  ansible.builtin.apt:
     name:
       - git
       - python3-venv
@@ -13,16 +14,20 @@
       - docker.io
       - docker-compose
     state: present
-    update_cache: yes
+  notify:
+    - Restart Docker
+    - Reload nginx
 
-- name: Ensure Docker service is running
-  service:
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
     name: docker
     state: started
     enabled: yes
 
-- name: Ensure nginx service is running
-  service:
+- name: Ensure nginx service is enabled and running
+  ansible.builtin.service:
     name: nginx
     state: started
     enabled: yes
+
+

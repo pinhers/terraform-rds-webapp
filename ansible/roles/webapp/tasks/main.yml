@@ -1,0 +1,28 @@
+---
+- name: Clone application repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ app_dir }}"
+    version: master
+    update: yes
+
+- name: Ensure Python venv exists
+  ansible.builtin.command: python3 -m venv "{{ venv_dir }}"
+  args:
+    creates: "{{ venv_dir }}/bin/activate"
+
+- name: Upgrade pip in venv
+  ansible.builtin.pip:
+    virtualenv: "{{ venv_dir }}"
+    name: pip
+    state: latest
+
+- name: Install Python packages in venv
+  ansible.builtin.pip:
+    virtualenv: "{{ venv_dir }}"
+    name:
+      - flask
+      - flask-sqlalchemy
+      - psycopg2-binary
+
+

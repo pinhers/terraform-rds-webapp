@@ -1,0 +1,12 @@
+---
+- name: Restart Docker
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+
+
