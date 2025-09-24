@@ -2,5 +2,8 @@
 collections:
   - name: community.general
   - name: community.docker
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 10ee45879a01b57c120d93fee04abb0e1b4c944f

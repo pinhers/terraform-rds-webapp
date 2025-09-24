@@ -2,7 +2,7 @@
   "ec2_public_ip": {
     "sensitive": false,
     "type": "string",
-    "value": "3.253.69.178"
+    "value": "3.249.216.195"
   },
   "rds_endpoint": {
     "sensitive": false,
@@ -12,7 +12,7 @@
   "rds_password": {
     "sensitive": true,
     "type": "string",
-    "value": "Uxci1PzlVuJVUEx%"
+    "value": "6kOxF4MgxAPX_Ucg"
   },
   "rds_port": {
     "sensitive": false,
