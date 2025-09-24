@@ -50,7 +50,7 @@ ansible-galaxy collection install -r requirements.yml
 
 Generate dynamic inventory from Terraform outputs (writes `inventory.ini`):
 ```bash
-ansible-playbook generate-inventory.ini
+ansible-playbook generate-inventory.yml
 ``;
 This reads `outputs.json` via `inventory.ini.j2` and sets the `web` group using `ec2_public_ip`.
 
