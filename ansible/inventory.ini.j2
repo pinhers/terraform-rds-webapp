@@ -1,11 +1,5 @@
-{% set outputs = lookup('file', '/home/ubuntu/terraform-rds-webapp/ansible/outputs.json') | from_json %}
-
 [web]
-<<<<<<< HEAD
-{{ lookup('community.general.json', 'outputs.json')['ec2_public_ip']['value'] }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/KEY1.pem
-=======
-{{ outputs['ec2_public_ip']['value'] }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/KEY1.pem
+{{ (lookup('file', 'outputs.json') | from_json).ec2_public_ip.value }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/KEY1.pem
 
 [db]
-{{ outputs['rds_endpoint']['value'] }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/KEY1.pem
->>>>>>> 10ee45879a01b57c120d93fee04abb0e1b4c944f
+{{ (lookup('file', 'outputs.json') | from_json).rds_endpoint.value }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/KEY1.pem
