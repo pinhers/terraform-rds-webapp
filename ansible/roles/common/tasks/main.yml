@@ -10,13 +10,12 @@
       - git
       - python3-venv
       - python3-pip
-      - nginx
       - docker.io
       - docker-compose
+      - postgresql-client-common
     state: present
   notify:
     - Restart Docker
-    - Reload nginx
 
 - name: Ensure Docker service is enabled and running
   ansible.builtin.service:
@@ -24,10 +23,10 @@
     state: started
     enabled: yes
 
-- name: Ensure nginx service is enabled and running
+- name: Ensure host nginx is stopped and disabled (using containerized nginx)
   ansible.builtin.service:
     name: nginx
-    state: started
-    enabled: yes
+    state: stopped
+    enabled: no
 
 

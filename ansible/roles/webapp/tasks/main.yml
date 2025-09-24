@@ -25,4 +25,38 @@
       - flask-sqlalchemy
       - psycopg2-binary
 
+- name: Render application config from Terraform outputs
+  ansible.builtin.template:
+    src: config.py.j2
+    dest: "{{ app_dir }}/webapp/config.py"
+    mode: '0644'
+
+- name: Render docker-compose.yml for webapp
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_dir }}/docker-compose.yml"
+    mode: '0644'
+
+- name: Start webapp container
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    state: present
+
+- name: Ensure nginx config directory exists
+  ansible.builtin.file:
+    path: "{{ app_dir }}/nginx"
+    state: directory
+    mode: '0755'
+
+- name: Render nginx.conf for containerized nginx
+  ansible.builtin.template:
+    src: "{{ role_path }}/../common/templates/nginx.conf.j2"
+    dest: "{{ app_dir }}/nginx/nginx.conf"
+    mode: '0644'
+
+- name: Recreate services to pick up nginx config
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    state: restarted
+
 

@@ -1,0 +1,14 @@
+import os
+
+# Values rendered from Terraform outputs via Ansible
+{% set tf = lookup('community.general.json', playbook_dir + '/outputs.json') %}
+DB_HOST = "{{ tf['rds_endpoint']['value'] }}"
+DB_PORT = {{ tf['rds_port']['value'] | default(5432) }}
+DB_NAME = "{{ db_name }}"
+DB_USER = "{{ tf['rds_username']['value'] }}"
+DB_PASS = "{{ tf['rds_password']['value'] }}"
+
+SQLALCHEMY_DATABASE_URI = "postgresql://{{ tf['rds_username']['value'] }}:{{ tf['rds_password']['value'] | urlencode }}@{{ tf['rds_endpoint']['value'] }}:{{ tf['rds_port']['value'] | default(5432) }}/{{ db_name }}"
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+

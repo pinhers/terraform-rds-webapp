@@ -1,0 +1,36 @@
+version: '3.9'
+services:
+  webapp:
+    container_name: webapp
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - {{ app_dir }}/webapp:/app:ro
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://{{ tf['rds_username']['value'] }}:{{ tf['rds_password']['value'] | urlencode }}@{{ tf['rds_endpoint']['value'] }}:{{ tf['rds_port']['value'] | default(5432) }}/{{ db_name }}
+    expose:
+      - "5000"
+    restart: unless-stopped
+    command: >-
+      bash -lc "pip install --no-cache-dir flask flask-sqlalchemy psycopg2-binary gunicorn
+      && gunicorn -b 0.0.0.0:5000 app:app"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx
+    depends_on:
+      webapp:
+        condition: service_healthy
+    volumes:
+      - {{ app_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
