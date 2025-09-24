@@ -4,3 +4,6 @@
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+
+
+inventory.ini
