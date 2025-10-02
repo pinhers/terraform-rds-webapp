@@ -42,16 +42,10 @@ terraform output -raw rds_password
 ```
 
 ## 2) Configure EC2 and deploy app with Ansible
-Install collections once:
-```bash
-cd ansible
-ansible-galaxy collection install -r requirements.yml
-```
-
 Generate dynamic inventory from Terraform outputs (writes `inventory.ini`):
 ```bash
 ansible-playbook generate-inventory.yml
-``;
+```
 This reads `outputs.json` via `inventory.ini.j2` and sets the `web` group using `ec2_public_ip`.
 
 Run the main playbook (dry-run then apply):
@@ -157,7 +151,6 @@ psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_por
 - `ansible/inventory.ini.j2` — inventory template (uses `ec2_public_ip`)
 - `ansible/vars/main.yml` — repo URL and paths
 - `ansible/ansible.cfg` — defaults (inventory, roles path, etc.)
-- `ansible/requirements.yml` — collections (`community.general`, `community.docker`)
 - Roles:
   - `roles/common` — base packages (git, python3, docker), stop/disable host nginx
   - `roles/webapp` — clone repo, render Docker Compose for `webapp` + `nginx`, start stack

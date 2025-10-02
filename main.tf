@@ -15,6 +15,10 @@ terraform {
       source  = "hashicorp/null"
       version = "~> 3.2"
     }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
+    }
   }
 }
 
@@ -334,6 +338,45 @@ output "rds_password" {
 }
 
 #############################
+# Write Ansible outputs.json without shelling out
+#############################
+resource "local_file" "ansible_outputs" {
+  filename = "${path.module}/ansible/outputs.json"
+  content  = jsonencode({
+    ec2_public_ip = {
+      sensitive = false
+      type      = "string"
+      value     = aws_instance.web.public_ip
+    }
+    rds_endpoint = {
+      sensitive = false
+      type      = "string"
+      value     = aws_db_instance.postgres.address
+    }
+    rds_port = {
+      sensitive = false
+      type      = "number"
+      value     = aws_db_instance.postgres.port
+    }
+    rds_username = {
+      sensitive = false
+      type      = "string"
+      value     = var.db_username
+    }
+    rds_password = {
+      sensitive = true
+      type      = "string"
+      value     = random_password.db.result
+    }
+  })
+
+  depends_on = [
+    aws_instance.web,
+    aws_db_instance.postgres
+  ]
+}
+
+#############################
 # Ansible provisioning from Terraform (local-exec)
 #############################
 resource "null_resource" "ansible_provision" {
@@ -344,11 +387,12 @@ resource "null_resource" "ansible_provision" {
 
   depends_on = [
     aws_instance.web,
-    aws_db_instance.postgres
+    aws_db_instance.postgres,
+    local_file.ansible_outputs
   ]
 
   provisioner "local-exec" {
     interpreter = ["PowerShell", "-Command"]
-    command     = "cd ${path.module}; terraform output -json > ansible/outputs.json; ansible-playbook -i ansible/inventory.ini ansible/generate-inventory.yml; ansible-playbook -i ansible/inventory.ini ansible/site.yml"
+    command     = "\n$ErrorActionPreference = 'Stop';\n# Ensure Ansible is installed\nif (-not (Get-Command ansible-playbook -ErrorAction SilentlyContinue)) {\n  Write-Host 'Ansible not found in PATH. Skipping Ansible runs.';\n  exit 0\n}\n# Wait for SSH to be reachable\n$ip='${aws_instance.web.public_ip}';\n$max=30; $i=0;\nwhile ($i -lt $max) {\n  try {\n    $res = Test-NetConnection -ComputerName $ip -Port 22 -WarningAction SilentlyContinue;\n    if ($res.TcpTestSucceeded) { break }\n  } catch {}\n  Start-Sleep -Seconds 10; $i++\n}\nif ($i -ge $max) { Write-Error 'EC2 SSH not reachable in time'; exit 1 }\n# Run from ansible directory\nSet-Location -Path '${path.module}/ansible';\nansible-playbook generate-inventory.yml;\nansible-playbook site.yml\n"
   }
 }
