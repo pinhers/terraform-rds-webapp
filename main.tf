@@ -11,6 +11,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "~> 3.2"
+    }
   }
 }
 
@@ -327,4 +331,24 @@ output "rds_password" {
   description = "RDS master password (sensitive)"
   value       = random_password.db.result
   sensitive   = true
+}
+
+#############################
+# Ansible provisioning from Terraform (local-exec)
+#############################
+resource "null_resource" "ansible_provision" {
+  triggers = {
+    instance_id = aws_instance.web.id
+    public_ip   = aws_instance.web.public_ip
+  }
+
+  depends_on = [
+    aws_instance.web,
+    aws_db_instance.postgres
+  ]
+
+  provisioner "local-exec" {
+    interpreter = ["PowerShell", "-Command"]
+    command     = "cd ${path.module}; terraform output -json > ansible/outputs.json; ansible-playbook -i ansible/inventory.ini ansible/generate-inventory.yml; ansible-playbook -i ansible/inventory.ini ansible/site.yml"
+  }
 }

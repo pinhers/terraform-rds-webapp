@@ -1,7 +1,7 @@
 import os
 
-# Values rendered from Terraform outputs via Ansible
-{% set tf = lookup('community.general.json', playbook_dir + '/outputs.json') %}
+# Values rendered from Terraform outputs via Ansible (core filters only)
+{% set tf = (lookup('file', playbook_dir + '/outputs.json') | from_json) %}
 DB_HOST = "{{ tf['rds_endpoint']['value'] }}"
 DB_PORT = {{ tf['rds_port']['value'] | default(5432) }}
 DB_NAME = "{{ db_name }}"

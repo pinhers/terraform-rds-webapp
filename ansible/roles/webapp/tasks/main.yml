@@ -37,10 +37,12 @@
     dest: "{{ app_dir }}/docker-compose.yml"
     mode: '0644'
 
-- name: Start webapp container
-  community.docker.docker_compose_v2:
-    project_src: "{{ app_dir }}"
-    state: present
+- name: Start containers with docker compose
+  ansible.builtin.shell: |
+    set -e
+    docker compose -f "{{ app_dir }}/docker-compose.yml" up -d
+  args:
+    executable: /bin/bash
 
 - name: Ensure nginx config directory exists
   ansible.builtin.file:
@@ -55,8 +57,10 @@
     mode: '0644'
 
 - name: Recreate services to pick up nginx config
-  community.docker.docker_compose_v2:
-    project_src: "{{ app_dir }}"
-    state: restarted
+  ansible.builtin.shell: |
+    set -e
+    docker compose -f "{{ app_dir }}/docker-compose.yml" up -d --remove-orphans
+  args:
+    executable: /bin/bash
 
 

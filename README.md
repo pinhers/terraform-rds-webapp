@@ -71,7 +71,14 @@ ansible-playbook -i inventory.ini site.yml
 ```
 
 ## 3) Manual database initialization and verification
-You can initialize the DB from your local machine using `psql`. This is required before the app can insert records.
+Terraform now triggers Ansible automatically after resources are created. You still need to initialize the database schema manually so the app can insert rows.
+
+What Terraform + Ansible already did for you:
+- Provisioned EC2 and RDS
+- Cloned this repo onto EC2 at `/home/ubuntu/terraform-rds-webapp`
+- Rendered `ansible/outputs.json` and `ansible/inventory.ini`
+- Deployed Docker Compose stack (`webapp` + `nginx`) on EC2
+- Set the `DATABASE_URL` env for `webapp` using Terraform outputs
 
 1. Retrieve connection details:
    - Endpoint: `terraform output rds_endpoint`
@@ -121,6 +128,29 @@ curl -s http://$(terraform output -raw ec2_public_ip)/health | jq .
 ```
 Expected: `{ "ok": true }`. If false, check RDS SG rules and credentials.
 
+6. Submit a sample entry to the app and verify in the database (manual test):
+
+- Submit via nginx (from your local machine):
+```bash
+curl -s -X POST http://$(terraform output -raw ec2_public_ip)/api/submit \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Afonso","email":"afonso@example.com","message":"Hello RDS"}' | jq .
+```
+Expected: `{ "status": "ok" }`.
+
+- Query the row in RDS:
+```bash
+psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_port) \
+  -U $(terraform output -raw rds_username) -d <db_name> -c "SELECT id,name,email,message,created_at FROM entries ORDER BY id DESC LIMIT 5;"
+```
+
+If you prefer to run `psql` on the EC2 host instead:
+```bash
+ssh -i ~/.ssh/KEY1.pem ubuntu@$(terraform output -raw ec2_public_ip)
+psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_port) \
+  -U $(terraform output -raw rds_username) -d <db_name> -c "\dt" # list tables
+```
+
 ## Project layout (Ansible)
 - `ansible/site.yml` — main playbook
 - `ansible/generate-inventory.ini` — playbook to render `inventory.ini` from `outputs.json`
@@ -138,6 +168,7 @@ Expected: `{ "ok": true }`. If false, check RDS SG rules and credentials.
 - Database connectivity: verify SG rules (web → db on 5432), `rds_endpoint`, and credentials.
 - Compose not running: `docker compose -f /home/ubuntu/terraform-rds-webapp/docker-compose.yml up -d` then check logs.
 - Healthcheck failing: confirm the `entries` table exists in `<db_name>`; create it manually if not.
+- Ansible auto-run from Terraform: see `null_resource.ansible_provision` in `main.tf`. It executes two playbooks: `ansible/generate-inventory.yml` and `ansible/site.yml`. Re-run them manually if needed.
 
 ## Next Steps
 - Add nginx site config to proxy the Flask app (e.g., to a Gunicorn service) and manage it via Ansible handlers.

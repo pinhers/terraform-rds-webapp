@@ -4,4 +4,4 @@
     - name: Build inventory.ini from template
       template:
         src: inventory.ini.j2
-        dest: /home/ubuntu/terraform-rds-webapp/ansible/inventory.ini
+        dest: inventory.ini
