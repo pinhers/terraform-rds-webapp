@@ -14,7 +14,8 @@ services:
       - "5000"
     restart: unless-stopped
     command: >-
-      bash -lc "gunicorn -b 0.0.0.0:5000 app:app"
+      bash -lc "pip install --no-cache-dir flask flask-sqlalchemy psycopg2-binary gunicorn
+      && gunicorn -b 0.0.0.0:5000 app:app"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5000/ || exit 1"]
       interval: 30s
