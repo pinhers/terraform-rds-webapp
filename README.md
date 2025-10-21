@@ -1,113 +1,40 @@
-## Terraform + Ansible: EC2 Web App with AWS RDS (PostgreSQL)
+# Terraform + Ansible: Web App with AWS RDS
 
-This project provisions AWS infrastructure with Terraform and configures an EC2 host with Ansible to run a Flask web app (Gunicorn) behind nginx, both as Docker containers, connected to a managed PostgreSQL RDS instance.
+This project deploys a Flask web application on AWS EC2 with PostgreSQL RDS using Terraform for infrastructure and Ansible for configuration.
+
+---
 
 ## Architecture
-- VPC with one public subnet (EC2) and two private subnets (RDS subnet group)
-- Security Groups:
-  - Web SG: SSH (22) and HTTP (80) from anywhere
-  - DB SG: PostgreSQL (5432) only from the Web SG
-- EC2 Ubuntu 22.04 instance in the public subnet
-- RDS PostgreSQL 15 in private subnets
-- Ansible installs base packages, Docker, clones the app, and deploys Docker Compose with two services:
-  - `webapp`: Python 3.11 slim image running `gunicorn` on port 5000
-  - `nginx`: proxies port 80 → `webapp:5000`
 
-## Prerequisites
-- Terraform >= 1.5
-- Ansible >= 2.14
-- AWS credentials configured (env vars or shared config)
-- Existing EC2 Key Pair in your region (`var.key_name`, default `KEY1`)
-- Local SSH private key at `~/.ssh/KEY1.pem` with correct permissions (chmod 600)
+- **EC2 Instance:** Runs Flask app in Docker container  
+- **RDS PostgreSQL:** Managed database in private subnet  
+- **Nginx:** Reverse proxy in Docker container  
+- **Security:** Proper security groups for SSH, HTTP, and database access  
 
-## 1) Provision infrastructure with Terraform
+---
+
+## Quick Start
+
+### 1. Provision AWS Infrastructure
 ```bash
 terraform init
 terraform apply -auto-approve
 ```
 
-Important outputs:
-- `ec2_public_ip` — Public IPv4 of EC2
-- `rds_endpoint` — PostgreSQL endpoint
-- `rds_port`, `rds_username`, `rds_password`
-
-Export outputs for Ansible:
+### 2. Deploy Application
 ```bash
+# Export Terraform outputs
 terraform output -json > ansible/outputs.json
-```
 
-Get the raw RDS password (sensitive) when needed:
-```bash
-terraform output -raw rds_password
-```
-
-## 2) Configure EC2 and deploy app with Ansible
-Generate dynamic inventory from Terraform outputs (writes `inventory.ini`):
-```bash
+# Generate inventory and deploy
+cd ansible
 ansible-playbook generate-inventory.yml
-```
-This reads `outputs.json` via `inventory.ini.j2` and sets the `web` group using `ec2_public_ip`.
-
-Run the main playbook (dry-run then apply):
-```bash
-ansible-playbook site.yml --check
-ansible-playbook site.yml
-```
-What this does:
-- Installs Docker and prerequisites
-- Clones this repo onto the EC2 host at `{{ app_dir }}`
-- Renders and starts a Docker Compose stack: `webapp` + `nginx`
-- Sets the `DATABASE_URL` env for `webapp` using Terraform RDS outputs
-
-With the provided `ansible.cfg`, `inventory.ini` is used automatically. You can also be explicit:
-```bash
 ansible-playbook -i inventory.ini site.yml
 ```
 
-## 3) Configure EC2 and deploy app with Ansible (manual)
-After Terraform completes, run Ansible manually:
-
-```bash
-# Export Terraform outputs for Ansible
-terraform output -json > ansible/outputs.json
-
-# Generate dynamic inventory
-cd ansible
-ansible-playbook generate-inventory.yml
-
-# Deploy the application
-ansible-playbook site.yml
-```
-
-What this does:
-- Installs Docker and prerequisites on EC2
-- Clones this repo onto EC2 at `/home/ubuntu/terraform-rds-webapp`
-- Deploys Docker Compose stack (`webapp` + `nginx`) on EC2
-- Sets the `DATABASE_URL` env for `webapp` using Terraform outputs
-
-## 4) Manual database initialization and verification
-You still need to initialize the database schema manually so the app can insert rows.
-
-1. Retrieve connection details:
-   - Endpoint: `terraform output rds_endpoint`
-   - Port: `terraform output rds_port`
-   - User: `terraform output rds_username`
-   - Password: `terraform output -raw rds_password`
-
-2. Connect to the RDS instance (to the default admin DB, often `postgres`):
-```bash
-psql -h <rds_endpoint> -p <rds_port> -U <db_user> -d postgres
-```
-Enter the password when prompted.
-
-3. Create your application database (match `db_name` used by Ansible; default `appdb` in `ansible/vars/main.yml`):
+### 3. Setup Database
+Connect to your RDS instance and create the table:
 ```sql
-CREATE DATABASE <db_name>;
-```
-
-4. Option A — Create tables manually in `<db_name>`:
-```sql
-\c <db_name>
 CREATE TABLE entries (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -117,66 +44,75 @@ CREATE TABLE entries (
 );
 ```
 
-4. Option B — Initialize via the running web app:
-- The running `webapp` container uses `DATABASE_URL` and exposes a health endpoint. You can create tables via migrations or manual SQL; for this simple app, creating the table manually (Option A) is enough.
+### 4. Test Your Application
+Open in browser:  
+`http://YOUR_EC2_PUBLIC_IP/`
 
-5. Verify the application containers and health:
-- SSH into EC2:
-```bash
-ssh -i ~/.ssh/KEY1.pem ubuntu@$(terraform output -raw ec2_public_ip)
-```
-- Check containers:
-```bash
-docker compose -f /home/ubuntu/terraform-rds-webapp/docker-compose.yml ps
-docker compose -f /home/ubuntu/terraform-rds-webapp/docker-compose.yml logs --no-log-prefix -n 100
-```
-- Healthcheck via nginx (from your local machine):
-```bash
-curl -s http://$(terraform output -raw ec2_public_ip)/health | jq .
-```
-Expected: `{ "ok": true }`. If false, check RDS SG rules and credentials.
+- Fill out the contact form  
+- Submit a message — it will be saved to PostgreSQL  
 
-6. Submit a sample entry to the app and verify in the database (manual test):
+---
 
-- Submit via nginx (from your local machine):
-```bash
-curl -s -X POST http://$(terraform output -raw ec2_public_ip)/api/submit \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Afonso","email":"afonso@example.com","message":"Hello RDS"}' | jq .
-```
-Expected: `{ "status": "ok" }`.
+## Manual Steps
 
-- Query the row in RDS:
+### Get Connection Details
 ```bash
-psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_port) \
-  -U $(terraform output -raw rds_username) -d <db_name> -c "SELECT id,name,email,message,created_at FROM entries ORDER BY id DESC LIMIT 5;"
+terraform output ec2_public_ip        # Your webapp URL
+terraform output rds_endpoint         # Database host
+terraform output rds_username         # Database user
+terraform output -raw rds_password    # Database password
 ```
 
-If you prefer to run `psql` on the EC2 host instead:
+### Test Health Check
 ```bash
-ssh -i ~/.ssh/KEY1.pem ubuntu@$(terraform output -raw ec2_public_ip)
-psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_port) \
-  -U $(terraform output -raw rds_username) -d <db_name> -c "\dt" # list tables
+curl http://YOUR_EC2_PUBLIC_IP/health
+# Expected: {"ok": true}
 ```
 
-## Project layout (Ansible)
-- `ansible/site.yml` — main playbook
-- `ansible/generate-inventory.ini` — playbook to render `inventory.ini` from `outputs.json`
-- `ansible/inventory.ini.j2` — inventory template (uses `ec2_public_ip`)
-- `ansible/vars/main.yml` — repo URL and paths
-- `ansible/ansible.cfg` — defaults (inventory, roles path, etc.)
-- Roles:
-  - `roles/common` — base packages (git, python3, docker), stop/disable host nginx
-  - `roles/webapp` — clone repo, render Docker Compose for `webapp` + `nginx`, start stack
+### Check Database
+```bash
+psql -h YOUR_RDS_ENDPOINT -U YOUR_DB_USER -d appdb -c "SELECT * FROM entries;"
+```
+
+---
+
+## Project Structure
+```
+├── terraform/           # AWS infrastructure
+├── ansible/
+│   ├── roles/
+│   │   ├── common/      # Base packages, Docker
+│   │   └── webapp/      # Flask app, nginx, containers
+│   ├── site.yml         # Main playbook
+│   └── vars/main.yml    # Application variables
+└── webapp/
+    ├── app.py           # Flask application
+    └── templates/       # HTML templates
+```
+
+---
 
 ## Troubleshooting
-- Inventory generation: ensure `ansible/outputs.json` exists (`terraform output -json > ansible/outputs.json`).
-- SSH errors: confirm `~/.ssh/KEY1.pem` path and permissions, and that `var.key_name` matches your key pair.
-- Database connectivity: verify SG rules (web → db on 5432), `rds_endpoint`, and credentials.
-- Compose not running: `docker compose -f /home/ubuntu/terraform-rds-webapp/docker-compose.yml up -d` then check logs.
-- Healthcheck failing: confirm the `entries` table exists in `<db_name>`; create it manually if not.
-- Ansible execution: run the manual steps in section 3 if needed.
 
-## Next Steps
-- Add nginx site config to proxy the Flask app (e.g., to a Gunicorn service) and manage it via Ansible handlers.
-- Optionally containerize the app and use Docker Compose; wire nginx as a reverse proxy.
+**Application not accessible?**
+- Check security groups allow HTTP (port 80)
+- Verify containers are running: `docker-compose ps`
+
+**Database connection issues?**
+- Confirm RDS security group allows EC2 instance
+- Check database credentials in Ansible variables
+
+**Form not working?**
+- Verify `entries` table exists in database
+- Check webapp logs: `docker-compose logs webapp`
+
+---
+
+## Clean Up
+```bash
+terraform destroy -auto-approve
+```
+
+Your webapp will be available at:  
+`http://YOUR_EC2_PUBLIC_IP/`  
+with a simple contact form that saves data to PostgreSQL RDS!
