@@ -5,11 +5,11 @@ services:
     image: python:3.11-slim
     working_dir: /app
     volumes:
-      - {{ app_dir }}/webapp:/app:ro
+      - ${app_dir}/webapp:/app:ro
     environment:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://{{ db_user }}:{{ db_password | urlencode }}@{{ db_host }}:{{ db_port }}/{{ db_name }}
+      - DATABASE_URL=postgresql://${rds_username}:${rds_password}@${rds_endpoint}:${rds_port}/${db_name}
     expose:
       - "5000"
     restart: unless-stopped
@@ -29,8 +29,9 @@ services:
       webapp:
         condition: service_healthy
     volumes:
-      - {{ app_dir }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${app_dir}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "80:80"
     restart: unless-stopped
+
 

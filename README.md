@@ -64,15 +64,29 @@ With the provided `ansible.cfg`, `inventory.ini` is used automatically. You can 
 ansible-playbook -i inventory.ini site.yml
 ```
 
-## 3) Manual database initialization and verification
-Terraform now triggers Ansible automatically after resources are created. You still need to initialize the database schema manually so the app can insert rows.
+## 3) Configure EC2 and deploy app with Ansible (manual)
+After Terraform completes, run Ansible manually:
 
-What Terraform + Ansible already did for you:
-- Provisioned EC2 and RDS
-- Cloned this repo onto EC2 at `/home/ubuntu/terraform-rds-webapp`
-- Rendered `ansible/outputs.json` and `ansible/inventory.ini`
-- Deployed Docker Compose stack (`webapp` + `nginx`) on EC2
-- Set the `DATABASE_URL` env for `webapp` using Terraform outputs
+```bash
+# Export Terraform outputs for Ansible
+terraform output -json > ansible/outputs.json
+
+# Generate dynamic inventory
+cd ansible
+ansible-playbook generate-inventory.yml
+
+# Deploy the application
+ansible-playbook site.yml
+```
+
+What this does:
+- Installs Docker and prerequisites on EC2
+- Clones this repo onto EC2 at `/home/ubuntu/terraform-rds-webapp`
+- Deploys Docker Compose stack (`webapp` + `nginx`) on EC2
+- Sets the `DATABASE_URL` env for `webapp` using Terraform outputs
+
+## 4) Manual database initialization and verification
+You still need to initialize the database schema manually so the app can insert rows.
 
 1. Retrieve connection details:
    - Endpoint: `terraform output rds_endpoint`
@@ -161,7 +175,7 @@ psql -h $(terraform output -raw rds_endpoint) -p $(terraform output -raw rds_por
 - Database connectivity: verify SG rules (web → db on 5432), `rds_endpoint`, and credentials.
 - Compose not running: `docker compose -f /home/ubuntu/terraform-rds-webapp/docker-compose.yml up -d` then check logs.
 - Healthcheck failing: confirm the `entries` table exists in `<db_name>`; create it manually if not.
-- Ansible auto-run from Terraform: see `null_resource.ansible_provision` in `main.tf`. It executes two playbooks: `ansible/generate-inventory.yml` and `ansible/site.yml`. Re-run them manually if needed.
+- Ansible execution: run the manual steps in section 3 if needed.
 
 ## Next Steps
 - Add nginx site config to proxy the Flask app (e.g., to a Gunicorn service) and manage it via Ansible handlers.

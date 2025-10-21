@@ -1,0 +1,12 @@
+import os
+
+DB_HOST = "${rds_endpoint}"
+DB_PORT = ${rds_port}
+DB_NAME = "${db_name}"
+DB_USER = "${rds_username}"
+DB_PASS = "${rds_password}"
+
+SQLALCHEMY_DATABASE_URI = "postgresql://${rds_username}:${rds_password}@${rds_endpoint}:${rds_port}/${db_name}"
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+

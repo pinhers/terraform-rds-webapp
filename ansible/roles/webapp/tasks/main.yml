@@ -3,7 +3,7 @@
   ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ app_dir }}"
-    version: master
+    version: main
     update: yes
 
 - name: Ensure Python venv exists
@@ -37,10 +37,10 @@
     dest: "{{ app_dir }}/docker-compose.yml"
     mode: '0644'
 
-- name: Start containers with docker compose
+- name: Start containers with docker-compose
   ansible.builtin.shell: |
     set -e
-    docker compose -f "{{ app_dir }}/docker-compose.yml" up -d
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d
   args:
     executable: /bin/bash
 
@@ -59,7 +59,7 @@
 - name: Recreate services to pick up nginx config
   ansible.builtin.shell: |
     set -e
-    docker compose -f "{{ app_dir }}/docker-compose.yml" up -d --remove-orphans
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d --remove-orphans
   args:
     executable: /bin/bash
 

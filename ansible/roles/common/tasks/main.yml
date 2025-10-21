@@ -7,15 +7,25 @@
 - name: Install base packages
   ansible.builtin.apt:
     name:
+      - nginx
       - git
       - python3-venv
       - python3-pip
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
       - docker.io
       - docker-compose
-      - postgresql-client-common
+      - postgresql-client
     state: present
+    force_apt_get: yes
   notify:
     - Restart Docker
+
+- name: Reload systemd to pick up new Docker service
+  ansible.builtin.systemd:
+    daemon_reload: yes
 
 - name: Ensure Docker service is enabled and running
   ansible.builtin.service:
@@ -24,9 +34,10 @@
     enabled: yes
 
 - name: Ensure host nginx is stopped and disabled (using containerized nginx)
-  ansible.builtin.service:
+  service:
     name: nginx
     state: stopped
     enabled: no
-
-
+  ignore_errors: true
+  register: nginx_stop_result
+  changed_when: false
