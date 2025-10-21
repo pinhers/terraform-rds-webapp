@@ -90,8 +90,8 @@
             </div>
             
             <div class="form-group">
-                <label for="message">Message:</label>
-                <textarea id="message" name="message" required></textarea>
+                <label for="messageText">Message:</label>
+                <textarea id="messageText" name="message" required></textarea>
             </div>
             
             <button type="submit">Send Message</button>
@@ -105,8 +105,11 @@
             const formData = {
                 name: document.getElementById('name').value,
                 email: document.getElementById('email').value,
-                message: document.getElementById('message').value
+                message: document.getElementById('messageText').value
             };
+            
+            // Debug: log what we're sending
+            console.log('Sending data:', formData);
             
             try {
                 const response = await fetch('/api/submit', {
@@ -118,6 +121,7 @@
                 });
                 
                 const result = await response.json();
+                console.log('Server response:', result);
                 
                 const messageDiv = document.getElementById('message');
                 messageDiv.style.display = 'block';
@@ -137,6 +141,7 @@
                 }, 5000);
                 
             } catch (error) {
+                console.error('Error:', error);
                 const messageDiv = document.getElementById('message');
                 messageDiv.style.display = 'block';
                 messageDiv.className = 'message error';
