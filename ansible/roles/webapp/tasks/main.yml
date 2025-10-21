@@ -24,6 +24,7 @@
       - flask
       - flask-sqlalchemy
       - psycopg2-binary
+      - gunicorn
 
 - name: Render application config from Terraform outputs
   ansible.builtin.template:
@@ -37,12 +38,33 @@
     dest: "{{ app_dir }}/docker-compose.yml"
     mode: '0644'
 
-- name: Start containers with docker-compose
+- name: Start containers with docker-compose (debug)
   ansible.builtin.shell: |
-    set -e
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d || true
   args:
     executable: /bin/bash
+
+- name: Get container logs for debugging
+  ansible.builtin.shell: |
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" logs
+  args:
+    executable: /bin/bash
+  register: container_logs
+
+- name: Display container logs
+  ansible.builtin.debug:
+    var: container_logs.stdout
+
+- name: Check container status
+  ansible.builtin.shell: |
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" ps -a
+  args:
+    executable: /bin/bash
+  register: container_status
+
+- name: Display container status
+  ansible.builtin.debug:
+    var: container_status.stdout
 
 - name: Ensure nginx config directory exists
   ansible.builtin.file:
