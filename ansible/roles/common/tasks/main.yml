@@ -7,7 +7,6 @@
 - name: Install base packages
   ansible.builtin.apt:
     name:
-      - nginx
       - git
       - python3-venv
       - python3-pip
@@ -16,12 +15,34 @@
       - curl
       - software-properties-common
       - docker.io
-      - docker-compose
       - postgresql-client
     state: present
     force_apt_get: yes
   notify:
     - Restart Docker
+
+- name: Create Docker CLI plugins directory
+  file:
+    path: /usr/lib/docker/cli-plugins
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Install Docker Compose plugin
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64"
+    dest: "/usr/lib/docker/cli-plugins/docker-compose"
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create docker-compose symlink for compatibility
+  file:
+    src: "/usr/lib/docker/cli-plugins/docker-compose"
+    dest: "/usr/bin/docker-compose"
+    state: link
+    force: yes
 
 - name: Reload systemd to pick up new Docker service
   ansible.builtin.systemd:
@@ -39,5 +60,4 @@
     state: stopped
     enabled: no
   ignore_errors: true
-  register: nginx_stop_result
   changed_when: false
