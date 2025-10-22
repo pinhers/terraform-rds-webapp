@@ -118,5 +118,3 @@
     docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d --remove-orphans
   args:
     executable: /bin/bash
-
-
