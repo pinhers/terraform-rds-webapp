@@ -38,47 +38,17 @@
     dest: "{{ app_dir }}/docker-compose.yml"
     mode: '0644'
 
-- name: Clean up corrupted container state
-  ansible.builtin.shell: |
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" down -v --remove-orphans || true
-    docker rm -f webapp nginx || true
-  args:
-    executable: /bin/bash
-  ignore_errors: true
-
-- name: Start containers with docker-compose (debug)
-  ansible.builtin.shell: |
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d || true
-  args:
-    executable: /bin/bash
-
-- name: Get container logs for debugging
-  ansible.builtin.shell: |
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" logs
-  args:
-    executable: /bin/bash
-  register: container_logs
-
-- name: Display container logs
-  ansible.builtin.debug:
-    var: container_logs.stdout
-
-- name: Check container status
-  ansible.builtin.shell: |
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" ps -a
-  args:
-    executable: /bin/bash
-  register: container_status
-
-- name: Display container status
-  ansible.builtin.debug:
-    var: container_status.stdout
-
+# Create nginx config BEFORE starting containers
 - name: Ensure nginx config directory exists
   ansible.builtin.file:
     path: "{{ app_dir }}/nginx"
     state: directory
     mode: '0755'
+
+- name: Remove any existing nginx.conf (directory or file)
+  ansible.builtin.file:
+    path: "{{ app_dir }}/nginx/nginx.conf"
+    state: absent
 
 - name: Create nginx.conf
   ansible.builtin.copy:
@@ -112,9 +82,38 @@
     dest: "{{ app_dir }}/nginx/nginx.conf"
     mode: '0644'
 
-- name: Recreate services to pick up nginx config
+- name: Clean up corrupted container state
   ansible.builtin.shell: |
-    set -e
-    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d --remove-orphans
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" down -v --remove-orphans || true
+    docker rm -f webapp nginx || true
   args:
     executable: /bin/bash
+  ignore_errors: true
+
+- name: Start containers with docker-compose
+  ansible.builtin.shell: |
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" up -d
+  args:
+    executable: /bin/bash
+
+- name: Get container logs for debugging
+  ansible.builtin.shell: |
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" logs
+  args:
+    executable: /bin/bash
+  register: container_logs
+
+- name: Display container logs
+  ansible.builtin.debug:
+    var: container_logs.stdout
+
+- name: Check container status
+  ansible.builtin.shell: |
+    docker-compose -f "{{ app_dir }}/docker-compose.yml" ps -a
+  args:
+    executable: /bin/bash
+  register: container_status
+
+- name: Display container status
+  ansible.builtin.debug:
+    var: container_status.stdout
