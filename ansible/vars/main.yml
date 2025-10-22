@@ -7,5 +7,5 @@ db_name: "appdb"
 
 db_host: "terraform-rds-postgres.cvs2aksy0tqm.eu-west-1.rds.amazonaws.com" #"your-rds-endpoint-from-terraform.region.rds.amazonaws.com"
 db_user: "appuser" #"your_db_username"
-db_password: "%b8mYWY2v2Z4ffoL" #"your_db_password"
+db_password: "KCh_RjJch4Oz8bOG" #"your_db_password"
 db_port: 5432
